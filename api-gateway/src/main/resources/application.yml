@@ -1,0 +1,74 @@
+# application.yml de api-gateway
+server:
+  port: 8222
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:4200"
+            allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
+            allowedHeaders: "*"
+            allowCredentials: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
+      routes:
+        # ── jungle-events ──────────────────────────────
+        - id: event-service
+          uri: lb://jungle-events        # ✅ lb:// = load balancer via Eureka
+          predicates:
+            - Path=/api/events/**
+
+        - id: session-service
+          uri: lb://jungle-events
+          predicates:
+            - Path=/api/sessions/**
+
+        - id: participation-service
+          uri: lb://jungle-events
+          predicates:
+            - Path=/api/participations/**
+
+        - id: email-service
+          uri: lb://jungle-events
+          predicates:
+            - Path=/api/email/**
+
+        # ── jungle-payments ────────────────────────────
+        - id: payment-service              # ✅ Nouveau
+          uri: lb://jungle-payments
+          predicates:
+            - Path=/api/payments/**
+              
+        # ── user-service ✅ NOUVEAU ───────────────────
+        - id: user-auth-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/auth/**
+
+        - id: user-management-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**
+
+        - id: student-profile-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/students/**
+
+        - id: tutor-profile-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/tutors/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+

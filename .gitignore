@@ -1,0 +1,13 @@
+# Ignorer dossiers inutiles
+.idea/
+User-Service/
+
+# Ignorer fichiers zip
+*.zip
+
+# Ignorer fichiers système
+.DS_Store
+Thumbs.db
+
+# Ignorer build Spring Boot
+target/
