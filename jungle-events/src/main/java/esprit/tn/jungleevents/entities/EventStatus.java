@@ -4,5 +4,5 @@ public enum EventStatus {
 
     PUBLISHED,    // visible aux utilisateurs
     CANCELLED,
-    COMPLETED
+    DRAFT, COMPLETED
 }
