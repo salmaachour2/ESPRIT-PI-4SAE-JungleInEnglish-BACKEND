@@ -1,0 +1,36 @@
+name: CD - jungle-events
+
+on:
+  workflow_run:
+    workflows: ["CI - jungle-events"]
+    types: [completed]
+    branches: [main, master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/jungle-events:latest
+            docker stop jungle-events || true
+            docker rm jungle-events || true
+            docker run -d \
+              --name jungle-events \
+              --network jungle-network \
+              -p 8090:8090 \
+              -e SPRING_DATASOURCE_URL=${{ secrets.EVENTS_DB_URL }} \
+              -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }} \
+              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/ \
+              ${{ secrets.DOCKERHUB_USERNAME }}/jungle-events:latest

@@ -1,0 +1,61 @@
+name: CI - jungle-payments
+
+on:
+  push:
+    branches: [main, master, salma-events-payments]
+    paths:
+      - 'jungle-payments/**'
+      - '.github/workflows/ci-jungle-payments.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'jungle-payments/**'
+
+jobs:
+  build-test-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run unit tests
+        run: mvn -f jungle-payments/pom.xml test
+
+      - name: Build JAR
+        run: mvn -f jungle-payments/pom.xml package -DskipTests
+
+      - name: SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mvn -f jungle-payments/pom.xml sonar:sonar \
+            -Dsonar.projectKey=salmaachour2_jungle-payments \
+            -Dsonar.organization=salmaachour2 \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./jungle-payments
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/jungle-payments:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/jungle-payments:${{ github.sha }}

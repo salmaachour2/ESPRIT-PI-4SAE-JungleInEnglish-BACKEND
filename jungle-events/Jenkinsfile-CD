@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "salmaachour2/jungle-events"
+        CONTAINER  = "jungle-events"
+        PORT       = "8090"
+    }
+
+    stages {
+
+        stage('Pull Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh """
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker pull ${IMAGE_NAME}:latest
+                        docker logout
+                    """
+                }
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                sh """
+                    docker stop ${CONTAINER} || true
+                    docker rm   ${CONTAINER} || true
+                    docker run -d \
+                      --name ${CONTAINER} \
+                      --network jungle-network \
+                      -p ${PORT}:${PORT} \
+                      --env-file /opt/jungle/jungle-events.env \
+                      ${IMAGE_NAME}:latest
+                """
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh """
+                    sleep 15
+                    curl -f http://localhost:${PORT}/actuator/health || exit 1
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Déploiement jungle-events réussi sur le serveur"
+        }
+        failure {
+            sh "docker stop ${CONTAINER} || true"
+            echo "Déploiement échoué — rollback effectué"
+        }
+    }
+}
