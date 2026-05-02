@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME    = "salmaachour2/jungle-events"
+        IMAGE_NAME    = "salmaachour93/jungle-events"
         IMAGE_TAG     = "${BUILD_NUMBER}"
         SONAR_PROJECT = "jungle-events"
     }
