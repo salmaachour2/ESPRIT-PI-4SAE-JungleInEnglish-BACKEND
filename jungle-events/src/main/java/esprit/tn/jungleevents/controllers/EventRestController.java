@@ -1,5 +1,6 @@
 package esprit.tn.jungleevents.controllers;
 
+import esprit.tn.jungleevents.DTO.EventRequest;
 import esprit.tn.jungleevents.DTO.EventResponse;
 import esprit.tn.jungleevents.entities.Event;
 import esprit.tn.jungleevents.services.EventService;
@@ -20,40 +21,25 @@ public class EventRestController {
     @Autowired
     private EventService eventService;
 
-    @PostMapping(
-            value = "/addEvent",
-            consumes = {"multipart/form-data"}
-    )
+    @PostMapping(value = "/addEvent", consumes = {"multipart/form-data"})
     public ResponseEntity<?> addEvent(
-            @Valid @ModelAttribute Event event,
+            @Valid @ModelAttribute EventRequest request,
             BindingResult result,
             @RequestParam(value = "file", required = false) MultipartFile file
     ) throws Exception {
 
         if (result.hasErrors()) {
-            String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
-            return ResponseEntity.badRequest().body(errorMessage);
+            return ResponseEntity.badRequest().body(result.getAllErrors().get(0).getDefaultMessage());
         }
 
-        if (event.getEndDate().isBefore(event.getStartDate())) {
+        if (request.getEndDate().isBefore(request.getStartDate())) {
             return ResponseEntity.badRequest().body("La date de fin doit être après la date de début");
         }
 
-        // ✅ Gestion upload fichier
+        Event event = toEntity(request);
+
         if (file != null && !file.isEmpty()) {
-
-            String uploadDir = System.getProperty("user.dir") + "/uploads/";
-            File uploadFolder = new File(uploadDir);
-
-            if (!uploadFolder.exists()) {
-                uploadFolder.mkdirs(); // IMPORTANT
-            }
-
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-
-            File destinationFile = new File(uploadDir + fileName);
-            file.transferTo(destinationFile);
-
+            String fileName = saveFile(file);
             event.setMediaFileName(fileName);
         }
 
@@ -70,48 +56,33 @@ public class EventRestController {
         return eventService.getEventById(id);
     }
 
-    @PutMapping(
-            value = "updateEventById/{id}",
-            consumes = {"multipart/form-data"}
-    )
+    @PutMapping(value = "updateEventById/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<?> updateEvent(
             @PathVariable Long id,
-            @Valid @ModelAttribute Event event,
+            @Valid @ModelAttribute EventRequest request,
             BindingResult result,
             @RequestParam(value = "file", required = false) MultipartFile file
     ) throws Exception {
 
         if (result.hasErrors()) {
-            String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
-            return ResponseEntity.badRequest().body(errorMessage);
+            return ResponseEntity.badRequest().body(result.getAllErrors().get(0).getDefaultMessage());
         }
 
+        Event event = toEntity(request);
+
         if (file != null && !file.isEmpty()) {
-
-            String uploadDir = System.getProperty("user.dir") + "/uploads/";
-            File uploadFolder = new File(uploadDir);
-
-            if (!uploadFolder.exists()) {
-                uploadFolder.mkdirs(); // IMPORTANT
-            }
-
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-
-            File destinationFile = new File(uploadDir + fileName);
-            file.transferTo(destinationFile);
-
+            String fileName = saveFile(file);
             event.setMediaFileName(fileName);
         }
 
         return ResponseEntity.ok(eventService.updateEvent(id, event));
     }
 
-
-
     @DeleteMapping("deleteEventById/{id}")
     public void deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
     }
+
     @GetMapping("/internal/{id}")
     public ResponseEntity<EventResponse> getEventForPayment(@PathVariable Long id) {
         Event event = eventService.getEventById(id);
@@ -122,5 +93,34 @@ public class EventRestController {
         dto.setLocation(event.getLocation());
         dto.setStatus(event.getStatus() != null ? event.getStatus().name() : null);
         return ResponseEntity.ok(dto);
+    }
+
+    private Event toEntity(EventRequest req) {
+        Event event = new Event();
+        event.setTitle(req.getTitle());
+        event.setDescription(req.getDescription());
+        event.setCategory(req.getCategory());
+        event.setLocation(req.getLocation());
+        event.setMeetLink(req.getMeetLink());
+        event.setFormat(req.getFormat());
+        event.setStatus(req.getStatus());
+        event.setPrice(req.getPrice());
+        event.setMaxParticipants(req.getMaxParticipants());
+        event.setStartDate(req.getStartDate());
+        event.setEndDate(req.getEndDate());
+        event.setLatitude(req.getLatitude());
+        event.setLongitude(req.getLongitude());
+        return event;
+    }
+
+    private String saveFile(MultipartFile file) throws Exception {
+        String uploadDir = System.getProperty("user.dir") + "/uploads/";
+        File uploadFolder = new File(uploadDir);
+        if (!uploadFolder.exists()) {
+            uploadFolder.mkdirs();
+        }
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        file.transferTo(new File(uploadDir + fileName));
+        return fileName;
     }
 }
