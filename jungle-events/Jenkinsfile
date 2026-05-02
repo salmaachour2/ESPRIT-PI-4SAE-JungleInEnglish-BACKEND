@@ -23,7 +23,7 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 dir('jungle-events') {
-                    sh 'mvn test'
+                    sh 'mvn test jacoco:report'
                 }
             }
             post {
