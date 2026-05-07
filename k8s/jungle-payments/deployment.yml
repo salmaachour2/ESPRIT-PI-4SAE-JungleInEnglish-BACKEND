@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: jungle-payments
-          image: salmaachour2/jungle-payments:latest
+          image: salmaachour93/jungle-payments:latest
           ports:
             - containerPort: 8091
           env:
@@ -42,18 +42,10 @@ spec:
                   key: stripe-key
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: "http://eureka-server:8761/eureka/"
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8091
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8091
-            initialDelaySeconds: 60
-            periodSeconds: 20
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            - name: MANAGEMENT_HEALTH_EUREKA_ENABLED
+              value: "false"
 ---
 apiVersion: v1
 kind: Service
